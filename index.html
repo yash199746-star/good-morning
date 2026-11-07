@@ -51,7 +51,7 @@
   #msg .gm{font-style:italic;font-weight:500;font-size:23px;letter-spacing:.03em;color:#7d3a55}
   #msg .name{font-family:'Great Vibes',cursive;font-size:58px;line-height:.95;margin:0 0 10px;color:#b23a5e;
     text-shadow:0 0 22px rgba(255,210,160,.85)}
-  #msg .t{font-size:19.5px;line-height:1.3;margin:0 0 7px;font-weight:500}
+  #msg .t{font-size:19.5px;line-height:1.3;margin:0 0 9px;font-weight:500}
   #msg .last{font-size:23px;font-weight:600;font-style:italic;color:#a32f52;margin:11px 0 0}
 
   /* ---------- controls ---------- */
@@ -61,7 +61,8 @@
     opacity:0;pointer-events:none;transition:opacity 1.2s ease;text-shadow:0 1px 4px rgba(0,0,0,.25)}
   .btn.on{opacity:1;pointer-events:auto}
   #replay{left:50%;transform:translateX(-50%);padding:9px 20px;border-radius:999px;font-size:17px;font-style:italic;letter-spacing:.03em}
-  #mute{right:18px;width:40px;height:40px;border-radius:50%;font-size:17px;padding:0}
+  #mute,#reread{right:18px;width:40px;height:40px;border-radius:50%;font-size:17px;padding:0}
+  #reread{right:auto;left:18px}
 </style>
 </head>
 <body>
@@ -80,14 +81,14 @@
 <div id="msg">
   <div class="l gm">Good morning,</div>
   <div class="l name">Hetasvi</div>
-  <p class="l t">Before the day begins, there’s something you should know —</p>
-  <p class="l t">you are loved, so deeply, by Yash.</p>
-  <p class="l t">He is endlessly grateful that you’re a part of his life,</p>
-  <p class="l t">and he hopes to make you the happiest woman on this planet — no, in this whole universe.</p>
-  <p class="l last">He loves you a lot. Like… a <i>lot</i>. ♥</p>
+  <p class="l t">Just wanted to remind you before your day starts that you’re very, very loved.</p>
+  <p class="l t">I’m honestly so grateful to have you in my life, and I hope I can keep making you happy and putting a smile on your face every single day.</p>
+  <p class="l t">You deserve all the happiness in the world, and I really hope I can be a big part of that.</p>
+  <p class="l last">I love you so much, Hetu ♥</p>
 </div>
 
-<button class="btn" id="replay">↺ watch the sunrise again</button>
+<button class="btn" id="reread" aria-label="read the message again">💌</button>
+<button class="btn" id="replay">↺ watch again</button>
 <button class="btn" id="mute" aria-label="sound">🔊</button>
 
 <script>
@@ -207,11 +208,32 @@ function mountain(id,keys,rough){
   const pts=ridge(keys,rough,4);
   const line='M'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L');
   const stops=linGrad(id,[[0,'#000'],[1,'#000']]);
-  el('path',{d:line+' L430,874 L-30,874Z',fill:`url(#${id})`},svg);
+  const body=line+' L430,874 L-30,874Z';
+  el('path',{d:body,fill:`url(#${id})`},svg);
   const rim=el('path',{d:line,fill:'none',stroke:'#ffe0a8','stroke-width':1.4,'stroke-linejoin':'round',opacity:0},svg);
-  return {stops,rim};
+  return {stops,rim,body,pts};
 }
-const far = mountain('mFar',[[-20,520],[30,478],[78,440],[120,470],[168,418],[205,462],[232,490],[262,456],[300,425],[345,462],[385,432],[425,456]],.35);
+const FAR_PEAKS=[[78,440],[168,418],[300,425],[385,432]];
+const far = mountain('mFar',[[-20,520],[30,478],FAR_PEAKS[0],[120,470],FAR_PEAKS[1],[205,462],[232,490],[262,456],FAR_PEAKS[2],[345,462],FAR_PEAKS[3],[425,456]],.35);
+
+// snow caps: a jagged snowline clipped to the far range, with shaded faces turned away from the sun
+el('clipPath',{id:'farClip'},defs).appendChild(el('path',{d:far.body},null));
+const snowStops = linGrad('snowG',[[0,'#000'],[1,'#000']]);
+const snowG = el('g',{'clip-path':'url(#farClip)'},svg);
+{
+  // snow reaches further down right under each peak, with gullies where it streaks lower
+  const line=x=>446+Math.max(...FAR_PEAKS.map(([px])=>16*Math.exp(-Math.pow((x-px)/26,2))));
+  let d='M-30,0 L430,0';
+  for(let x=430;x>=-30;x-=4){
+    const y=line(x)+R(-2,2.5);
+    if(rnd()<.22){ const g=R(5,14); d+=` L${x+1.5},${y.toFixed(1)} L${x},${(y+g).toFixed(1)} L${x-1.5},${y.toFixed(1)}`; }
+    else d+=` L${x},${y.toFixed(1)}`;
+  }
+  el('path',{d:d+' L-30,0Z',fill:'url(#snowG)'},snowG);
+}
+{const sg=document.getElementById('snowG');sg.setAttribute('gradientUnits','userSpaceOnUse');sg.setAttribute('y1',412);sg.setAttribute('y2',474);sg.setAttribute('x2',0);}
+svg.appendChild(far.rim);
+const SNOW={top:[[0,'#14142a'],[.45,'#6b5a8c'],[.72,'#ffd2c6'],[1,'#fffaf7']],bot:[[0,'#0d0d1c'],[.45,'#4b3f6e'],[.72,'#f4b2b4'],[1,'#e8e6f2']]};
 
 // mist
 radGrad('mistG',[[0,'#fff',.9],[1,'#fff',0]]);
@@ -251,8 +273,16 @@ roundTree(150,634,.55); cypress(282,630,.6);
 
 el('path',{d:'M-10,640 C80,612 160,626 230,634 S350,614 412,624 L412,874 L-10,874Z',fill:'url(#gBack)'},svg);
 
+// river: snowmelt stream that starts small near the hills and widens toward the viewer
+const RV0=636, RV1=884;
+const rvU=y=>clamp((y-RV0)/(RV1-RV0));
+const rvX=y=>{const u=rvU(y);return 240-70*Math.sin(u*2.4)+30*u;};
+const rvW=y=>1.5+Math.pow(rvU(y),1.25)*58;
+const inRiver=(x,y,m=0)=>y>RV0-3&&Math.abs(x-rvX(y))<rvW(y)+m;
+
 const grassG = el('g',{fill:'none','stroke-linecap':'round','stroke-width':1.1},svg);
 function tuft(x,y,s){
+  if(inRiver(x,y,3)) return;
   for(let k=0;k<3;k++){
     const h=R(6,11)*s, dx=(k-1)*R(1.5,3)*s;
     el('path',{d:`M${x.toFixed(1)},${y.toFixed(1)} q${(dx*.4).toFixed(1)},${(-h*.6).toFixed(1)} ${dx.toFixed(1)},${(-h).toFixed(1)}`},grassG);
@@ -262,6 +292,40 @@ for(let i=0;i<70;i++){const x=R(0,W);tuft(x,632+R(0,40),R(.5,.9));}
 
 el('path',{d:'M-10,706 C90,680 190,698 262,708 S362,690 412,700 L412,874 L-10,874Z',fill:'url(#gFront)'},svg);
 for(let i=0;i<110;i++){const x=R(0,W),y=R(702,874);tuft(x,y,.7+(y-700)/174*1.1);}
+
+const RIVER={
+  bank:[[0,'#020302'],[.4,'#0f1c10'],[1,'#3e7838']],
+  top:[[0,'#06060e'],[.45,'#3a2a55'],[.72,'#ffbca4'],[1,'#dff0f8']],
+  bot:[[0,'#03030a'],[.45,'#1d1a3a'],[.72,'#5d6fa8'],[1,'#4c9ccf']],
+  rock:[[0,'#060606'],[.4,'#1e1e26'],[1,'#9a96a2']],
+};
+function riverPath(m){
+  const L=[],Rt=[];
+  for(let y=RV0;y<=RV1;y+=4){
+    const wob=Math.sin(y*.21)*.8*rvU(y);
+    L.push(`${(rvX(y)-rvW(y)-m+wob).toFixed(1)},${y}`);
+    Rt.unshift(`${(rvX(y)+rvW(y)+m-wob).toFixed(1)},${y}`);
+  }
+  return `M${rvX(RV0).toFixed(1)},${RV0-2-m*.5} L${L.join(' L')} L${Rt.join(' L')}Z`;
+}
+const bankEl=el('path',{d:riverPath(3.5)},svg);
+const waterStops=linGrad('waterG',[[0,'#000'],[1,'#000']]);
+el('path',{d:riverPath(0),fill:'url(#waterG)'},svg);
+const ripG=el('g',{fill:'none',stroke:'#fff','stroke-linecap':'round'},svg);
+const ripples=[];
+for(let i=0;i<40;i++) ripples.push({e:el('path',{},ripG),p0:rnd(),o:R(-.75,.75),sp:R(.035,.06)});
+const sparkG=el('g',{fill:'#fffbe8'},svg);
+const sparkles=[];
+for(let i=0;i<30;i++){
+  const y=RV0+Math.pow(rnd(),.8)*(RV1-RV0-6)+4;
+  sparkles.push({e:el('circle',{cx:rvX(y)+R(-.8,.8)*rvW(y),cy:y,r:R(.6,1.4)},sparkG),f:R(2,5),p:R(0,6.3)});
+}
+const rockStops=linGrad('rockG',[[0,'#000'],[1,'#000']]);
+[[.5,-1,7,4],[.56,-1,4,2.6],[.78,1,9,5],[.95,-1,12,6],[.9,1,6,3.5]].forEach(([u,side,rx,ry])=>{
+  const y=RV0+u*(RV1-RV0), x=rvX(y)+side*(rvW(y)-rx*.3);
+  el('ellipse',{cx:x,cy:y,rx,ry,fill:'url(#rockG)'},svg);
+  el('ellipse',{cx:x+side*1.5,cy:y+ry*.7,rx:rx*1.1,ry:1.1,fill:'none',stroke:'#fff','stroke-width':.8,opacity:.5,class:'foam'},svg);
+});
 
 // ---------- flowers ----------
 const flowersG = el('g',{},svg);
@@ -315,6 +379,7 @@ for(const f of fl){
   if(f.y<700 && f.y<640+ (f.x>230? -10:0)) f.y+=12;
   const type=f.type||pick(types.filter(t=>t!=='sun'||f.y>760));
   const s=.55+(f.y-650)/222*1.15;
+  if(inRiver(f.x,f.y,3+4*s)) continue;
   const h=(type==='sun'?R(44,52):type==='lav'?R(28,36):R(20,32));
   const g=el('g',{transform:'scale(0)'},flowersG);
   drawStem(g,h,R(-5,5));
@@ -374,8 +439,11 @@ const lines=[...msg.querySelectorAll('.l')];
 const replay=document.getElementById('replay');
 const muteBtn=document.getElementById('mute');
 const MSG_AT=12.6;
-const LINE_AT=[0,.8,2.4,4.6,6.6,9.0,12.0];
+const LINE_AT=[0,.8,2.6,7.4,14.0,19.5];
 const END_AT=MSG_AT+LINE_AT[LINE_AT.length-1];
+const HIDE_AT=END_AT+8;   // card fades so the scenery can be seen
+const reread=document.getElementById('reread');
+let autoHidden=false;
 
 let sunTarget=455, t0=null;
 
@@ -422,6 +490,8 @@ function update(t){
   mid.stops[1].setAttribute('stop-color',ramp(MTN.midB,glow));
   near.stops[0].setAttribute('stop-color',ramp(MTN.nearT,glow));
   near.stops[1].setAttribute('stop-color',ramp(MTN.nearB,glow));
+  snowStops[0].setAttribute('stop-color',ramp(SNOW.top,glow));
+  snowStops[1].setAttribute('stop-color',ramp(SNOW.bot,glow));
   const rim=(bell(glow,.72,.4)*.9+glow*.25);
   far.rim.setAttribute('opacity',rim.toFixed(3));
   mid.rim.setAttribute('opacity',(rim*.6).toFixed(3));
@@ -439,6 +509,19 @@ function update(t){
   const trunkC=ramp(GRN.trunk,grn);
   if(trunkC!==update.trunk){treesG.querySelectorAll('.trunk').forEach(e=>e.setAttribute('fill',trunkC));update.trunk=trunkC;}
   grassG.setAttribute('stroke',ramp(GRN.grass,grn));
+  bankEl.setAttribute('fill',ramp(RIVER.bank,grn));
+  waterStops[0].setAttribute('stop-color',ramp(RIVER.top,glow));
+  waterStops[1].setAttribute('stop-color',ramp(RIVER.bot,glow));
+  rockStops[0].setAttribute('stop-color',ramp(RIVER.rock,grn));
+  rockStops[1].setAttribute('stop-color',ramp([[0,'#030303'],[1,'#57535f']],grn));
+  const wl=.25+.75*glow;
+  for(const r of ripples){
+    const p=(r.p0+t*r.sp)%1, y=RV0+p*(RV1-RV0), w=rvW(y), x=rvX(y)+r.o*w, L=2+w*.32;
+    r.e.setAttribute('d',`M${(x-L/2).toFixed(1)},${y.toFixed(1)} Q${x.toFixed(1)},${(y-.8-p).toFixed(1)} ${(x+L/2).toFixed(1)},${y.toFixed(1)}`);
+    r.e.setAttribute('stroke-width',(.5+p*1.3).toFixed(2));
+    r.e.setAttribute('opacity',(Math.sin(p*Math.PI)*.55*wl).toFixed(3));
+  }
+  for(const s of sparkles) s.e.setAttribute('opacity',(Math.pow(Math.max(0,Math.sin(t*s.f+s.p)),8)*sunP).toFixed(3));
 
   for(const f of flowers){
     const g=prog(t,f.start,1.8,easeOut);
@@ -481,9 +564,12 @@ function update(t){
     }
   }
 
-  if(t>=MSG_AT && !msg.classList.contains('show')) msg.classList.add('show');
+  if(t>=MSG_AT && t<HIDE_AT && !msg.classList.contains('show')) msg.classList.add('show');
   lines.forEach((l,i)=>{ if(t>=MSG_AT+LINE_AT[i] && !l.classList.contains('on')) l.classList.add('on'); });
-  if(t>=END_AT+2.5 && !replay.classList.contains('on')) replay.classList.add('on');
+  if(t>=HIDE_AT && !autoHidden){
+    autoHidden=true; msg.classList.remove('show');
+    replay.classList.add('on'); reread.classList.add('on');
+  }
 
   if(t>=END_AT-.5 && t>=nextHeart){
     nextHeart=t+R(.35,.8);
@@ -558,8 +644,24 @@ function startAudio(){
       o.connect(g); g.connect(pan||bus); o.start(s); o.stop(s+.1);
     }
   }
+  // river: looping noise shaped into a low rush plus a wandering babble, fading in as the river appears
+  const nb=AC.createBuffer(2,AC.sampleRate*6|0,AC.sampleRate);
+  for(let c=0;c<2;c++){const d=nb.getChannelData(c);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
+  const water=AC.createBufferSource(); water.buffer=nb; water.loop=true;
+  const riverGain=AC.createGain(); riverGain.gain.setValueAtTime(0,AC.currentTime);
+  riverGain.gain.linearRampToValueAtTime(1,AC.currentTime+9);
+  riverGain.connect(master);
+  const rush=AC.createBiquadFilter(); rush.type='lowpass'; rush.frequency.value=480; rush.Q.value=.5;
+  const rushG=AC.createGain(); rushG.gain.value=.16;
+  water.connect(rush); rush.connect(rushG); rushG.connect(riverGain);
+  const babble=AC.createBiquadFilter(); babble.type='bandpass'; babble.frequency.value=1200; babble.Q.value=2.2;
+  const babbleG=AC.createGain(); babbleG.gain.value=.05;
+  water.connect(babble); babble.connect(babbleG); babbleG.connect(riverGain);
+  water.start();
   sched=setInterval(()=>{
     const now=AC.currentTime;
+    babble.frequency.setTargetAtTime(650+Math.random()*1700,now,.12);
+    babbleG.gain.setTargetAtTime(.025+Math.random()*.07,now,.1);
     while(nChord<now+.6){pad(chords[ci++%4],nChord,6);nChord+=6.5;}
     while(nBell<now+.6){bell(nBell);nBell+=.9+Math.random()*1.8;}
     while(nChirp<now+.6){chirp(nChirp);nChirp+=2.5+Math.random()*4;}
@@ -573,6 +675,11 @@ muteBtn.addEventListener('click',e=>{e.stopPropagation();setMuted(!muted);});
 document.addEventListener('visibilitychange',()=>{ if(!AC) return; document.hidden?AC.suspend():AC.resume(); });
 
 // ---------- start / replay ----------
+reread.addEventListener('click',e=>{
+  e.stopPropagation();
+  lines.forEach(l=>l.classList.add('on'));
+  msg.classList.toggle('show');
+});
 let started=false, ready=false;
 function begin(offset=0){
   if(started) return; started=true;
@@ -586,7 +693,7 @@ function begin(offset=0){
 document.addEventListener('click',()=>{ if(!ready||started) return; startAudio(); begin(); });
 replay.addEventListener('click',e=>{
   e.stopPropagation();
-  replay.classList.remove('on'); msg.classList.remove('show'); lines.forEach(l=>l.classList.remove('on'));
+  replay.classList.remove('on'); reread.classList.remove('on'); autoHidden=false; msg.classList.remove('show'); lines.forEach(l=>l.classList.remove('on'));
   hearts.forEach(h=>h.e.remove()); hearts=[]; nextHeart=0;
   svg.style.transition='opacity .9s ease'; svg.style.opacity=0;
   setTimeout(()=>{ t0=performance.now(); update(0); svg.style.transition='opacity 2.4s ease'; svg.style.opacity=1; },950);
